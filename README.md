@@ -1,3 +1,5 @@
+# Overview:
+
 A Program to average multiple stress strain curves and produce the averaged data as well
 as plots of the experimental data with the average. Averaging is done using the equal
 arc segmentation method described by Zhong and Wille:
