@@ -9,7 +9,7 @@ arc segmentation method described by Zhong and Wille:
 
 
 
-INSTRUCTIONS:
+# INSTRUCTIONS:
 
 input the sample labels into the sampleLabels.txt file in input
 input the thickness (mm) associated with each sample lable into thicknesses.txt in the same exact order
