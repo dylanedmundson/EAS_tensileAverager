@@ -14,7 +14,7 @@ file1 = open("input/sampleLabels.txt")
 labels = file1.read()
 labels = labels.split('\n')
 for subDir in os.listdir(directory):
-    if not subDir.endswith(".txt"):
+    if not subDir.endswith(".txt") and not subDir == ".gitignore":
         files = []
         thicknesses = []
         for fileName in os.listdir(os.path.join(directory, subDir)):

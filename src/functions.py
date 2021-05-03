@@ -5,6 +5,7 @@ import numpy as np
 import math as m
 from scipy.optimize import leastsq
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 #takes path of csv file, gaugelength of tensile test (in m), and cross sectional area of films (in mm^2)
 #returns 2 arrays _ stress, strain
@@ -154,8 +155,6 @@ def get_arc_points(stress, strain):
     elif not np.isclose(Spost, sum(sgs_post), 0.01):
         diff = Spost - sum(sgs_post)
         print("Spre and sum of s_pre_i off by ", diff, " adjust N constants")
-    else:
-        print("processing....")
     
     return yarc, xarc
 
@@ -167,10 +166,11 @@ def average_plots(stress_plots, strain_plots):
     strains = []
     stresses = []
 
-    for i in range(len(stress_plots)):
+    for i in tqdm(range(len(stress_plots)), desc="Processing..."):
         stress, strain = get_arc_points(stress_plots[i], strain_plots[i])
         stresses.append(stress)
         strains.append(strain)
+        pass
 
     strain_ave = []
     stress_ave = []
@@ -199,6 +199,8 @@ def outputAverageFile(files, thicknesses):
     print("sample " + outputFileName[1], " starting")
     outputFileName = "output/" + outputFileName[1]
 
+    # for i in tqdm (range (25), desc="Loading..."):
+    # pass
     for i in range(len(files)):
         stress, strain = load_csv(files[i], const.GAUGE_LENGTH, thicknesses[i] * const.WIDTH)
         stresses.append(stress)
