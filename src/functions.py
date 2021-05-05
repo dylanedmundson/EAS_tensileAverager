@@ -41,21 +41,22 @@ def get_max_index(array):
 #assumes strain and stress are same length
 #@strain input strain array
 #@stress input stress array
-#@return strainLPartition, strainRPartition, stressLPartition, stressRPartition
+#@return strainLPartition, strainRPartition, stressLPartition, stressRPartition, splitIndex, buffRange
 def partition(strain, stress):
     _ , splitIndex = get_max_index(stress)
     strainL = []
     strainR = []
     stressL = []
     stressR = []
+    buffRange = int(splitIndex / 5) #collect extra data from each side for better fit
     for i in range(len(strain)):
-        if i > splitIndex:
+        if i > splitIndex - buffRange:
             strainR.append(strain[i])
             stressR.append(stress[i])
-        else:
+        if i <= splitIndex + buffRange:
             strainL.append(strain[i])
             stressL.append(stress[i])
-    return np.array(strainL), np.array(strainR), np.array(stressL), np.array(stressR)
+    return np.array(strainL), np.array(strainR), np.array(stressL), np.array(stressR), splitIndex, buffRange
 
 #least squares regression model for line fits (4th order polynomial)
 #@coeffs coefficients for model ax^4 + bx^3 + cx^2 + dx + e
@@ -85,18 +86,18 @@ def residuals(coeffs, function, eps, exp):
 #@return stress_arc, strain_arc
 def get_arc_points(stress, strain):
     #partitions the data into pre and post max stress
-    strain_pre, strain_post, stress_pre, stress_post = partition(strain, stress)
+    strain_pre, strain_post, stress_pre, stress_post, splitIndex, buffRange = partition(strain, stress)
 
     # fit pre and post partitions with 4th order polynomial using least squares regression
     # and generate fitted data brocken into N segments where Npre and Npost are >> than 
     # the number of experimental data points in those repective partitions
     coeff_guess = [0, 0, 0, 0, 0]
     coeff_pre, _ = leastsq(residuals, coeff_guess, args=(model, strain_pre, stress_pre))
-    fitStrain_pre = np.arange(strain_pre[0], strain_pre[len(strain_pre)-1], (strain_pre[len(strain_pre) - 1] - strain_pre[0])/ const.N_PRE)
+    fitStrain_pre = np.arange(strain_pre[0], strain_pre[splitIndex], (strain_pre[splitIndex] - strain_pre[0])/ const.N_PRE)
     fit_pre = model(coeff_pre, fitStrain_pre)
 
     coeff_post, _ = leastsq(residuals, coeff_guess, args=(model, strain_post, stress_post))
-    fitStrain_post = np.arange(strain_post[0], strain_post[len(strain_post) - 1], (strain_post[len(strain_post) - 1] - strain_post[0]) / const.N_POST)
+    fitStrain_post = np.arange(strain_post[buffRange], strain_post[len(strain_post) - 1], (strain_post[len(strain_post) - 1] - strain_post[buffRange]) / const.N_POST)
     fit_post = model(coeff_post, fitStrain_post)
 
     # calculate arc length of each point int fit
@@ -121,7 +122,6 @@ def get_arc_points(stress, strain):
     sgs_pre = []
     sgs_post = []
 
-    #TODO some sort of issue here with index out of bounds
     for i in range(1, int(const.N_PRE/const.n_pre_factor) + 1):
         seg = 0
         j = 0
@@ -207,6 +207,10 @@ def outputAverageFile(files, thicknesses):
         strains.append(strain)
 
     stress_ave, strain_ave = average_plots(stresses, strains)
+    trimIndex = trimOscilationZero(stress_ave)
+    if not trimIndex == -1:
+        stress_ave = stress_ave[0:trimIndex]
+        strain_ave = strain_ave[0:trimIndex]
 
     #write data to save file
     with open((outputFileName + ".csv"), "w") as f:
@@ -225,6 +229,13 @@ def outputAverageFile(files, thicknesses):
         plt.xlabel("Strain (%")
         plt.ylabel("Stress (MPa)")
         plt.savefig(outputFileName + ".png")
+        plt.close()
     print("sample complete and written to: ", outputFileName)
     print("..............")
     
+
+def trimOscilationZero(stress):
+    for i in range(1, len(stress)):
+        if stress[i - 1] > stress[i] and stress[i] <= 0:
+            return i
+    return -1
